@@ -1,0 +1,8 @@
+{
+    "version": "0.1.0",
+    "extensions": {
+        "txt": "~/bucket/txt",
+        "mp4": "~/bucket/movies",
+        "mov": "~/bucket/movies"
+    }
+}
