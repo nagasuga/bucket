@@ -20,8 +20,7 @@ Go to a git project and execute `bucket` in terminal
 ```
 $ bucket [-h] [--settings SETTINGS] [-p] [-v] filename [filename ...]
 
-CLI for auto "bucket"ing files by moving to proper directory filtered by type
-of file.
+CLI for auto "bucket"ing files by moving to proper directory filtered by type of file.
 
 positional arguments:
   filename             files to be moved to correct buckets
@@ -37,5 +36,4 @@ optional arguments:
 TODO
 ====
 
-* support regular expression for multiple files in directory
 * support complex rules like "extension is txt and source dir is ~/Downloads
