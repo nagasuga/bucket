@@ -62,6 +62,10 @@ def main(args):
             logging.error('{}: File not found'.format(abs_file_path))
             continue
 
+        if os.path.isdir(abs_file_path):
+            logging.info('{}: Skipping directory'.format(abs_file_path))
+            continue
+
         _, ext = os.path.splitext(file_path)
         ext = ext[1:]
 
