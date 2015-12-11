@@ -9,16 +9,6 @@ import shutil
 import sys
 
 
-DEFAULT_CONFIG = {
-    'version': '0.1.0',
-    'extensions': {
-        'txt': '~/bucket/txt',
-        'mp4': '~/bucket/movies',
-        'mov': '~/bucket/movies',
-    }
-}
-
-
 class ConfigNotFound(Exception): pass
 
 
@@ -47,8 +37,13 @@ def write_config(dest_path, config):
 
 def load_or_create_config(target_path):
     abs_path = os.path.expanduser(target_path)
+    default_config_path = os.path.join(
+        os.path.dirname(os.path.realpath(__file__)),
+        '..',
+        'default_config.json')
+                
     if not os.path.exists(abs_path):
-        config = DEFAULT_CONFIG
+        config = json.loads(open(default_config_path, 'r').read())
         write_config(abs_path, config=config)
         return config
     return load_config(abs_path)
