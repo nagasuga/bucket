@@ -10,58 +10,85 @@ import sys
 
 
 DEFAULT_CONFIG = {
-    'txt': '~/bucket/txt',
-    'mp4': '~/bucket/movies',
-    'mov': '~/bucket/movies',
+    'version': '0.1.0',
+    'extensions': {
+        'txt': '~/bucket/txt',
+        'mp4': '~/bucket/movies',
+        'mov': '~/bucket/movies',
+    }
 }
 
 
 class ConfigNotFound(Exception): pass
 
 
-def set_logger():
-    handler = logging.StreamHandler()
-    handler.setLevel(logging.WARNING)
+def set_logger(is_verbose=False):
+    level = logging.WARNING
+    if is_verbose:
+        level = logging.DEBUG
+    logging.basicConfig(level=level, format='%(levelname)s: %(message)s')
 
 
-def load_config(file_path):
-    if not os.path.exists(file_path):
-        raise ConfigNotFound('Config file {} was not found'.format(file_path))
+def load_config(target_path):
+    if not os.path.exists(target_path):
+        raise ConfigNotFound('Config file {} was not found'.format(target_path))
 
-    with open(file_path, 'r') as f_obj:
+    with open(target_path, 'r') as f_obj:
         content = f_obj.read()
 
     return json.loads(content)
 
 
-def main(file_paths, config, to_create_path=False):
-    errors = []
-    for file_path in file_paths:
+def write_config(dest_path, config):
+    f_obj = open(dest_path, 'w')
+    f_obj.write(json.dumps(config, indent=4))
+    f_obj.close()
+
+
+def load_or_create_config(target_path):
+    abs_path = os.path.expanduser(target_path)
+    if not os.path.exists(abs_path):
+        config = DEFAULT_CONFIG
+        write_config(abs_path, config=config)
+        return config
+    return load_config(abs_path)
+
+
+def main(args):
+    config_path = args.settings
+    if config_path is not None:
+        config = load_config(config_path)
+    else:
+        config = load_or_create_config(target_path='~/.bucket')
+
+    for file_path in args.file_paths:
         abs_file_path = os.path.expanduser(file_path)
         if not os.path.exists(abs_file_path):
-            print('File not found: {}'.format(abs_file_path))
+            logging.error('{}: File not found'.format(abs_file_path))
             continue
 
         _, ext = os.path.splitext(file_path)
         ext = ext[1:]
 
-        dest_dir = config.get(ext)
+        dest_dir = config.get('extensions', {}).get(ext)
         if dest_dir is None:
-            print('Unknown file extension "{ext}": '
-                  '{file_path}'.format(file_path=file_path, ext=ext))
+            logging.error('{file_path}: Unknown file extension "{ext}"'
+                  .format(file_path=file_path, ext=ext))
             continue
 
         abs_dest_dir = os.path.expanduser(dest_dir)
         abs_path = os.path.join(abs_dest_dir, file_path)
 
-        if to_create_path and not os.path.isdir(dest_dir):
-            os.makedirs(dest_dir)
+        if args.p and not os.path.isdir(abs_dest_dir):
+            logging.info('Creating directory: {}'.format(abs_dest_dir))
+            os.makedirs(abs_dest_dir)
 
         try:
             shutil.move(file_path, abs_path)
         except IOError as err:
-            print('Unable to move {}: {}'.format(file_path, err))
-            errors.append((file_path, err))
+            logging.error('{}: {}'.format(file_path, err))
+        else:
+            logging.info('{}: moved to {}'.format(file_path, abs_path))
 
 
 def setup_args():
@@ -77,24 +104,12 @@ def setup_args():
                         help='Create intermediate directories as required. '
                              'If this option is not specified, the full path '
                              'prefix of each operand must already exist.')
+    parser.add_argument('-v', dest='is_verbose', action='store_true',
+                        help='Verbose mode to print more information.')
     return parser.parse_args()
 
 
 if __name__ == '__main__':
-    set_logger()
     args = setup_args()
-
-    config_path = args.settings
-    if config_path is not None:
-        config = load_config(config_path)
-    else:
-        config_path = os.path.expanduser('~/.bucket')
-        if not os.path.exists(config_path):
-            config = DEFAULT_CONFIG
-            with open(config_path, 'w') as f_obj:
-                f_obj.write(json.dumps(config, indent=4))
-        else:
-            config = load_config(config_path)
-
-    file_paths = set(sys.argv[1:])
-    main(file_paths, config=config, to_create_path=args.p)
+    set_logger(is_verbose=args.is_verbose)
+    main(args=args)
